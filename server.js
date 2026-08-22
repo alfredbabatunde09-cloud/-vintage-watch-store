@@ -3,15 +3,29 @@ const path = require("path");
 const fs = require("fs");
 const Database = require("better-sqlite3");
 const crypto = require("crypto");
-
+const session = require("express-session");
 const app = express();
 app.use(express.json());
 const PORT = process.env.PORT || 3000;
 
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || "admin";
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "ChangeMe123!";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+
 const SESSION_SECRET =
   process.env.SESSION_SECRET || crypto.randomBytes(32).toString("hex");
+
+app.use(session({
+  secret: SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: true,
+    httpOnly: true,
+    sameSite: "lax",
+    maxAge: 24 * 60 * 60 * 1000
+  }
+}));
+
 
 const dataDir = path.join(__dirname, "data");
 fs.mkdirSync(dataDir, { recursive: true });
