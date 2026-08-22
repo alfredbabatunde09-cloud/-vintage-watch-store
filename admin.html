@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VINTAGE Admin</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#0b0806;color:#eee7dc;font-family:Arial,sans-serif}
+header{padding:22px 6vw;border-bottom:1px solid #3a2a1c;display:flex;justify-content:space-between;align-items:center}
+h1,h2{font-family:Georgia,serif;font-weight:500}.wrap{width:min(1200px,92%);margin:35px auto}
+.card{background:#15100c;border:1px solid #443323;border-radius:12px;padding:25px;margin-bottom:20px}
+input{display:block;width:100%;max-width:430px;padding:13px;margin:10px 0;background:#090705;border:1px solid #59432b;color:#fff;border-radius:6px}
+button{padding:12px 18px;border:1px solid #c59a5d;background:#b9894a;color:#100b07;border-radius:6px;cursor:pointer;font-weight:bold}
+button.secondary{background:transparent;color:#e8d4b6}.error{color:#ef9c9c;margin:10px 0}.hidden{display:none}
+.stats{display:flex;gap:15px;flex-wrap:wrap}.stat{flex:1;min-width:150px;padding:20px;background:#0e0a07;border:1px solid #392a1d;border-radius:10px}.num{font-size:30px;color:#d2ad76}
+.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:850px}th,td{text-align:left;padding:13px;border-bottom:1px solid #302419;font-size:14px}th{color:#cda76c}
+select{background:#0a0806;color:#fff;border:1px solid #55412b;padding:8px;border-radius:5px}
+#login{max-width:500px;margin:12vh auto}.muted{color:#9e9182}.top-actions{display:flex;gap:10px}
+</style>
+</head>
+<body>
+<header><h1>VINTAGE / Admin</h1><div class="top-actions"><button class="secondary" id="refresh">Refresh</button><button class="secondary" id="logout">Logout</button></div></header>
+
+<div class="wrap">
+  <section id="login" class="card">
+    <h2>Admin Login</h2>
+    <p class="muted">Use the admin credentials configured on your server.</p>
+    <input id="username" placeholder="Username" autocomplete="username">
+    <input id="password" type="password" placeholder="Password" autocomplete="current-password">
+    <button id="loginBtn">Login</button>
+    <div id="loginError" class="error"></div>
+  </section>
+
+  <section id="dashboard" class="hidden">
+    <div class="stats">
+      <div class="stat"><div class="muted">Total orders</div><div class="num" id="total">0</div></div>
+      <div class="stat"><div class="muted">New</div><div class="num" id="newCount">0</div></div>
+      <div class="stat"><div class="muted">Completed</div><div class="num" id="completed">0</div></div>
+    </div>
+    <div class="card">
+      <h2>Customer Orders</h2>
+      <p class="muted">Customer requests submitted through “GET THE LOOK” appear here.</p>
+      <div class="table-wrap"><table><thead><tr><th>Order</th><th>Customer</th><th>Contact</th><th>Product</th><th>Price</th><th>Date</th><th>Status</th><th></th></tr></thead><tbody id="orders"></tbody></table></div>
+    </div>
+  </section>
+</div>
+
+<script>
+let token=localStorage.getItem("vintage_admin_token");
+const $=id=>document.getElementById(id);
+function showDashboard(){ $("login").classList.add("hidden"); $("dashboard").classList.remove("hidden"); loadOrders(); }
+async function login(){
+  $("loginError").textContent="";
+  const r=await fetch("/api/admin/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:$("username").value,password:$("password").value})});
+  const d=await r.json();
+  if(!r.ok){$("loginError").textContent=d.error||"Login failed";return}
+  token=d.token; localStorage.setItem("vintage_admin_token",token); showDashboard();
+}
+async function loadOrders(){
+  const r=await fetch("/api/orders",{headers:{Authorization:"Bearer "+token}});
+  if(r.status===401){localStorage.removeItem("vintage_admin_token");token=null;location.reload();return}
+  const orders=await r.json();
+  $("total").textContent=orders.length;
+  $("newCount").textContent=orders.filter(o=>o.status==="new").length;
+  $("completed").textContent=orders.filter(o=>o.status==="completed").length;
+  $("orders").innerHTML=orders.map(o=>`<tr>
+    <td><b>${esc(o.order_code)}</b></td>
+    <td>${esc(o.name)}<br><span class="muted">${esc(o.message||"")}</span></td>
+    <td>${esc(o.email)}<br>${esc(o.phone)}</td>
+    <td>${esc(o.product)}</td><td>${esc(o.price||"")}</td>
+    <td>${new Date(o.created_at).toLocaleString()}</td>
+    <td><select onchange="setStatus(${o.id},this.value)">
+      ${["new","contacted","paid","completed","cancelled"].map(s=>`<option ${s===o.status?"selected":""}>${s}</option>`).join("")}
+    </select></td>
+    <td><button onclick="deleteOrder(${o.id})" class="secondary">Delete</button></td>
+  </tr>`).join("") || `<tr><td colspan="8">No orders yet.</td></tr>`;
+}
+function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
+async function setStatus(id,status){await fetch("/api/orders/"+id,{method:"PATCH",headers:{"Content-Type":"application/json",Authorization:"Bearer "+token},body:JSON.stringify({status})});loadOrders()}
+async function deleteOrder(id){if(!confirm("Delete this order permanently?"))return;await fetch("/api/orders/"+id,{method:"DELETE",headers:{Authorization:"Bearer "+token}});loadOrders()}
+$("loginBtn").onclick=login;$("refresh").onclick=loadOrders;
+$("logout").onclick=()=>{localStorage.removeItem("vintage_admin_token");location.reload()};
+if(token)showDashboard();
+</script>
+</body>
+</html>
