@@ -167,7 +167,151 @@ app.post("/api/admin/login", (req, res) => {
     token: makeToken(username)
   });
 });
+/* ---------------- CUSTOMER AUTHENTICATION ---------------- */
 
+function hashPassword(password) {
+  return crypto
+    .createHash("sha256")
+    .update(password)
+    .digest("hex");
+}
+
+app.post("/api/customer/register", (req, res) => {
+  const { name, email, phone, password } = req.body;
+
+  if (!name || !email || !phone || !password) {
+    return res.status(400).json({
+      error: "Please fill in all required fields"
+    });
+  }
+
+  if (password.length < 6) {
+    return res.status(400).json({
+      error: "Password must be at least 6 characters"
+    });
+  }
+
+  const cleanEmail = String(email).trim().toLowerCase();
+
+  const existingCustomer = db
+    .prepare("SELECT id FROM customers WHERE email = ?")
+    .get(cleanEmail);
+
+  if (existingCustomer) {
+    return res.status(409).json({
+      error: "An account with this email already exists"
+    });
+  }
+
+  const passwordHash = hashPassword(password);
+
+  const result = db
+    .prepare(`
+      INSERT INTO customers
+      (name, email, phone, password_hash, created_at)
+      VALUES (?, ?, ?, ?, ?)
+    `)
+    .run(
+      String(name).trim(),
+      cleanEmail,
+      String(phone).trim(),
+      passwordHash,
+      new Date().toISOString()
+    );
+
+  res.status(201).json({
+    ok: true,
+    customerId: Number(result.lastInsertRowid),
+    message: "Account created successfully"
+  });
+});
+
+
+app.post("/api/customer/login", (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({
+      error: "Email and password are required"
+    });
+  }
+
+  const cleanEmail = String(email).trim().toLowerCase();
+
+  const customer = db
+    .prepare(`
+      SELECT id, name, email, phone, password_hash
+      FROM customers
+      WHERE email = ?
+    `)
+    .get(cleanEmail);
+
+  if (!customer) {
+    return res.status(401).json({
+      error: "Invalid email or password"
+    });
+  }
+
+  const passwordHash = hashPassword(password);
+
+  if (passwordHash !== customer.password_hash) {
+    return res.status(401).json({
+      error: "Invalid email or password"
+    });
+  }
+
+  req.session.customerId = customer.id;
+
+  res.json({
+    ok: true,
+    customer: {
+      id: customer.id,
+      name: customer.name,
+      email: customer.email,
+      phone: customer.phone
+    }
+  });
+});
+
+
+app.post("/api/customer/logout", (req, res) => {
+  req.session.customerId = null;
+
+  res.json({
+    ok: true,
+    message: "Logged out successfully"
+  });
+});
+
+
+app.get("/api/customer/me", (req, res) => {
+  if (!req.session.customerId) {
+    return res.status(401).json({
+      error: "Not logged in"
+    });
+  }
+
+  const customer = db
+    .prepare(`
+      SELECT id, name, email, phone, created_at
+      FROM customers
+      WHERE id = ?
+    `)
+    .get(req.session.customerId);
+
+  if (!customer) {
+    req.session.customerId = null;
+
+    return res.status(401).json({
+      error: "Customer account not found"
+    });
+  }
+
+  res.json({
+    loggedIn: true,
+    customer
+  });
+});
 /* ---------------- ORDERS ---------------- */
 
 app.post("/api/orders", (req, res) => {
