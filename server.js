@@ -45,6 +45,12 @@ CREATE TABLE IF NOT EXISTS orders (
   price TEXT,
   message TEXT,
   status TEXT DEFAULT 'new'
+);CREATE TABLE IF NOT EXISTS customers (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  email TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  created_at TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS chat_messages (
