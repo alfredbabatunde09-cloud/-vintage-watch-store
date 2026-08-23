@@ -630,7 +630,123 @@
       messages.scrollTop = messages.scrollHeight;
 
     }
+/* CUSTOMER LOGIN / SIGN UP */
 
+let customerSignupMode = false;
+
+function openCustomerAuth() {
+    document.getElementById("customerAuth").style.display = "flex";
+}
+
+function closeCustomerAuth() {
+    document.getElementById("customerAuth").style.display = "none";
+}
+
+function toggleCustomerAuth() {
+    customerSignupMode = !customerSignupMode;
+
+    const title = document.getElementById("authTitle");
+    const subtitle = document.getElementById("authSubtitle");
+    const nameField = document.getElementById("nameField");
+    const submit = document.getElementById("authSubmit");
+    const switchText = document.getElementById("authSwitchText");
+    const switchButton = document.getElementById("authSwitchButton");
+
+    if (customerSignupMode) {
+        title.textContent = "Create Your Account";
+        subtitle.textContent = "Join Vintage Luxury Watches";
+        nameField.style.display = "block";
+        submit.textContent = "CREATE ACCOUNT";
+        switchText.textContent = "Already have an account?";
+        switchButton.textContent = "Login";
+    } else {
+        title.textContent = "Welcome Back";
+        subtitle.textContent = "Login to your Vintage account";
+        nameField.style.display = "none";
+        submit.textContent = "LOGIN";
+        switchText.textContent = "Don't have an account?";
+        switchButton.textContent = "Create Account";
+    }
+
+    document.getElementById("authMessage").textContent = "";
+}
+
+document.getElementById("customerAuthForm").addEventListener("submit", async function(event) {
+    event.preventDefault();
+
+    const name = document.getElementById("customerName").value.trim();
+    const email = document.getElementById("customerEmail").value.trim();
+    const password = document.getElementById("customerPassword").value;
+
+    const message = document.getElementById("authMessage");
+    const submit = document.getElementById("authSubmit");
+
+    message.textContent = "Please wait...";
+    submit.disabled = true;
+
+    try {
+        const endpoint = customerSignupMode
+            ? "/api/register"
+            : "/api/login";
+
+        const response = await fetch(endpoint, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                name,
+                email,
+                password
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || "Something went wrong");
+        }
+
+        localStorage.setItem("customerToken", data.token);
+
+        if (customerSignupMode) {
+            localStorage.setItem("customerName", data.name);
+            localStorage.setItem("customerEmail", data.email);
+            message.textContent = "Account created successfully!";
+        } else {
+            localStorage.setItem("customerName", data.customer.name);
+            localStorage.setItem("customerEmail", data.customer.email);
+            message.textContent = "Login successful!";
+        }
+
+        setTimeout(() => {
+            closeCustomerAuth();
+            updateCustomerAccountButton();
+        }, 800);
+
+    } catch (error) {
+        message.textContent = error.message;
+    }
+
+    submit.disabled = false;
+});
+
+
+function updateCustomerAccountButton() {
+    const button = document.querySelector(".account-btn");
+
+    if (!button) return;
+
+    const customerName = localStorage.getItem("customerName");
+
+    if (customerName) {
+        button.textContent = "MY ACCOUNT";
+    } else {
+        button.textContent = "LOGIN / SIGN UP";
+    }
+}
+
+updateCustomerAccountButton();
   </script>
 <!-- CUSTOMER AUTHENTICATION -->
 <div id="customerAuth" class="auth-overlay">
