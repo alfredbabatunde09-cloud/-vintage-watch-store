@@ -59,7 +59,18 @@ CREATE TABLE IF NOT EXISTS chat_messages (
 CREATE INDEX IF NOT EXISTS idx_chat_session
 ON chat_messages(session_id, id);
 `);
+// ---------------- CUSTOMER ACCOUNTS ----------------
 
+db.exec(`
+  CREATE TABLE IF NOT EXISTS customers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    phone TEXT NOT NULL,
+    password_hash TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  );
+`);
 app.use(express.json({ limit: "100kb" }));
 app.use(express.static(__dirname));
 
