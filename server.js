@@ -153,7 +153,100 @@ function requireAdmin(req, res, next) {
   req.admin = admin.username;
   next();
 }
+/* ---------------- CUSTOMER AUTHENTICATION ---------------- */
 
+app.post("/api/register", async (req, res) => {
+  const { name, email, password } = req.body;
+
+  if (!name || !email || !password) {
+    return res.status(400).json({
+      error: "Please fill in your name, email and password"
+    });
+  }
+
+  if (password.length < 6) {
+    return res.status(400).json({
+      error: "Password must be at least 6 characters"
+    });
+  }
+
+  const cleanEmail = email.trim().toLowerCase();
+
+  const existingCustomer = db
+    .prepare("SELECT id FROM customers WHERE email = ?")
+    .get(cleanEmail);
+
+  if (existingCustomer) {
+    return res.status(409).json({
+      error: "An account with this email already exists"
+    });
+  }
+
+  const passwordHash = crypto
+    .createHash("sha256")
+    .update(password)
+    .digest("hex");
+
+  db.prepare(`
+    INSERT INTO customers
+    (name, email, password_hash, created_at)
+    VALUES (?, ?, ?, ?)
+  `).run(
+    name.trim(),
+    cleanEmail,
+    passwordHash,
+    new Date().toISOString()
+  );
+
+  const token = makeToken(cleanEmail);
+
+  res.status(201).json({
+    ok: true,
+    token,
+    name: name.trim(),
+    email: cleanEmail
+  });
+});
+
+
+app.post("/api/login", (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({
+      error: "Please enter your email and password"
+    });
+  }
+
+  const cleanEmail = email.trim().toLowerCase();
+
+  const passwordHash = crypto
+    .createHash("sha256")
+    .update(password)
+    .digest("hex");
+
+  const customer = db
+    .prepare(`
+      SELECT id, name, email
+      FROM customers
+      WHERE email = ? AND password_hash = ?
+    `)
+    .get(cleanEmail, passwordHash);
+
+  if (!customer) {
+    return res.status(401).json({
+      error: "Incorrect email or password"
+    });
+  }
+
+  const token = makeToken(customer.email);
+
+  res.json({
+    ok: true,
+    token,
+    customer
+  });
+});
 /* ---------------- ADMIN LOGIN ---------------- */
 
 app.post("/api/admin/login", (req, res) => {
