@@ -5,21 +5,39 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>VINTAGE Concierge — Admin</title>
 <style>
-*{box-sizing:border-box}body{margin:0;background:#080808;color:#eee;font-family:Arial,sans-serif}
-.wrap{max-width:1100px;margin:auto;padding:22px}.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
-h1{font-family:Georgia,serif;font-weight:500}.gold{color:#d2ad59}
-.panel{background:#111;border:1px solid #29251f;border-radius:10px;overflow:hidden}
-.login{max-width:420px;margin:12vh auto;padding:26px}.login h1{margin-top:0}
-input,textarea,button{font:inherit}input,textarea{width:100%;background:#0b0b0b;border:1px solid #39352e;color:#fff;padding:12px;border-radius:5px;outline:none}
-button{border:0;background:#d0aa57;color:#080706;padding:11px 16px;border-radius:5px;cursor:pointer;font-weight:700}
-.login button{width:100%;margin-top:12px}.error{color:#ff7777;margin-top:10px}
-.app{display:none}.layout{display:grid;grid-template-columns:320px 1fr;min-height:650px}
-.chats{border-right:1px solid #29251f;overflow:auto}.chat-item{padding:16px;border-bottom:1px solid #24211d;cursor:pointer}.chat-item.active{background:#1b1710}.chat-item small{color:#888}.chat-item b{display:block;margin-bottom:6px}.chat-window{display:flex;flex-direction:column;min-width:0}
-.chat-title{padding:16px;border-bottom:1px solid #29251f}.messages{flex:1;padding:18px;overflow:auto;display:flex;flex-direction:column;gap:10px;min-height:0}
-.msg{max-width:75%;padding:10px 12px;border-radius:5px;line-height:1.5;font-size:13px}.customer{align-self:flex-start;background:#202020}.admin{align-self:flex-end;background:#d0aa57;color:#090806}
-.reply{display:grid;grid-template-columns:1fr auto;gap:8px;padding:12px;border-top:1px solid #29251f}
-.reply textarea{resize:none;height:70px}.muted{color:#888;font-size:12px}
-@media(max-width:700px){.layout{grid-template-columns:1fr}.chats{max-height:230px;border-right:0;border-bottom:1px solid #29251f}}
+* { box-sizing: border-box; }
+body { margin: 0; background: #080808; color: #eee; font-family: Arial, sans-serif; }
+.wrap { max-width: 1100px; margin: auto; padding: 22px; }
+.top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+h1 { font-family: Georgia, serif; font-weight: 500; }
+.gold { color: #d2ad59; }
+.panel { background: #111; border: 1px solid #29251f; border-radius: 10px; overflow: hidden; }
+.login { max-width: 420px; margin: 12vh auto; padding: 26px; }
+.login h1 { margin-top: 0; }
+input, textarea, button { font: inherit; }
+input, textarea { width: 100%; background: #0b0b0b; border: 1px solid #39352e; color: #fff; padding: 12px; border-radius: 5px; outline: none; }
+button { border: 0; background: #d0aa57; color: #080706; padding: 11px 16px; border-radius: 5px; cursor: pointer; font-weight: 700; }
+.login button { width: 100%; margin-top: 12px; }
+.error { color: #ff7777; margin-top: 10px; }
+.app { display: none; }
+.layout { display: grid; grid-template-columns: 320px 1fr; min-height: 650px; }
+.chats { border-right: 1px solid #29251f; overflow: auto; background: #0e0e0e; }
+.chat-item { padding: 16px; border-bottom: 1px solid #24211d; cursor: pointer; display: flex; flex-direction: column; gap: 6px; }
+.chat-item.active { background: #1b1710; }
+.chat-item b { display: block; font-weight: 700; }
+.chat-item small { color: #888; display: block; margin-top: 4px; font-size: 13px; }
+.chat-title { padding: 16px; border-bottom: 1px solid #29251f; background: #0f0f0f; }
+.messages { flex: 1; padding: 18px; overflow: auto; display: flex; flex-direction: column; gap: 10px; min-height: 0; background: linear-gradient(#0b0b0b, #0e0e0e); }
+.msg { max-width: 75%; padding: 10px 12px; border-radius: 5px; line-height: 1.5; font-size: 13px; word-break: break-word; }
+.customer { align-self: flex-start; background: #202020; color: #eee; }
+.admin { align-self: flex-end; background: #d0aa57; color: #090806; }
+.reply { display: grid; grid-template-columns: 1fr auto; gap: 8px; padding: 12px; border-top: 1px solid #29251f; background: #0b0b0b; }
+.reply textarea { resize: none; height: 70px; }
+.muted { color: #888; font-size: 12px; }
+@media (max-width: 700px) {
+  .layout { grid-template-columns: 1fr; }
+  .chats { max-height: 230px; border-right: 0; border-bottom: 1px solid #29251f; }
+}
 </style>
 </head>
 <body>
@@ -45,49 +63,88 @@ button{border:0;background:#d0aa57;color:#080706;padding:11px 16px;border-radius
   </div>
 </div>
 <script>
-let selected=null, chats=[];
-const $=id=>document.getElementById(id);
-async function login(){
-  const r=await fetch("/api/admin/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:$("user").value,password:$("pass").value})});
-  if(!r.ok){$("err").textContent="Wrong username or password.";return}
-  $("login").style.display="none";$("app").style.display="block";loadChats();startStream();
+let selected = null, chats = [];
+const $ = id => document.getElementById(id);
+
+async function login() {
+  const r = await fetch("/api/admin/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username: $("user").value, password: $("pass").value })
+  });
+  if (!r.ok) { $("err").textContent = "Wrong username or password."; return; }
+  $("login").style.display = "none"; $("app").style.display = "block"; loadChats(); startStream();
 }
-$("loginBtn").onclick=login;
-$("pass").addEventListener("keydown",e=>{if(e.key==="Enter")login()});
-$("logout").onclick=async()=>{await fetch("/api/admin/logout",{method:"POST"});location.reload()};
-async function loadChats(){
-  const r=await fetch("/api/admin/chats"); if(!r.ok){location.reload();return}
-  const d=await r.json(); chats=d.chats||[];renderList();
-  if(selected)openChat(selected); else if(chats[0])openChat(chats[0].session_id);
+$("loginBtn").onclick = login;
+$("pass").addEventListener("keydown", e => { if (e.key === "Enter") login(); });
+$("logout").onclick = async () => { await fetch("/api/admin/logout", { method: "POST" }); location.reload(); };
+
+async function loadChats() {
+  const r = await fetch("/api/admin/chats"); if (!r.ok) { location.reload(); return; }
+  const d = await r.json(); chats = d.chats || []; renderList();
+  if (selected) openChat(selected); else if (chats[0]) openChat(chats[0].session_id);
 }
-function renderList(){
-  $("chatList").innerHTML="";
-  chats.forEach(c=>{
-    const el=document.createElement("div");el.className="chat-item"+(c.session_id===selected?" active":"");
-    el.innerHTML="<b>"+escapeHtml(c.name||"Visitor")+"</b><small>"+escapeHtml(c.last_message||"No messages")+"</small>";
-    el.onclick=()=>openChat(c.session_id);$("chatList").appendChild(el);
+
+function renderList() {
+  $("chatList").innerHTML = "";
+  chats.forEach(c => {
+    const el = document.createElement("div");
+    el.className = "chat-item" + (c.session_id === selected ? " active" : "");
+    el.innerHTML = "<b>" + escapeHtml(c.name || "Visitor") + "</b><small>" + escapeHtml(c.last_message || "No messages") + "</small>";
+    el.onclick = () => openChat(c.session_id);
+    $("chatList").appendChild(el);
   });
 }
-async function openChat(id){
-  selected=id;renderList();
-  const c=chats.find(x=>x.session_id===id);$("chatTitle").textContent=c?.name||"Visitor";$("chatMeta").textContent=id;
-  $("reply").disabled=false;$("sendBtn").disabled=false;
-  const r=await fetch("/api/admin/chats/"+encodeURIComponent(id));const d=await r.json();
-  $("messages").innerHTML="";(d.messages||[]).forEach(add);
+
+async function openChat(id) {
+  selected = id; renderList();
+  const c = chats.find(x => x.session_id === id);
+  $("chatTitle").textContent = c?.name || "Visitor";
+  $("chatMeta").textContent = id;
+  $("reply").disabled = false; $("sendBtn").disabled = false;
+  const r = await fetch("/api/admin/chats/" + encodeURIComponent(id));
+  if (!r.ok) { $("messages").innerHTML = ""; return; }
+  const d = await r.json();
+  $("messages").innerHTML = "";
+  (d.messages || []).forEach(add);
 }
-function add(m){
-  if(m.session_id!==selected)return;
-  const el=document.createElement("div");el.className="msg "+m.sender;el.textContent=m.message;$("messages").appendChild(el);$("messages").scrollTop=$("messages").scrollHeight;
+
+function add(m) {
+  if (m.session_id !== selected) return;
+  const el = document.createElement("div");
+  el.className = "msg " + (m.sender === "admin" ? "admin" : "customer");
+  el.textContent = m.message;
+  $("messages").appendChild(el);
+  $("messages").scrollTop = $("messages").scrollHeight;
 }
-$("replyForm").onsubmit=async e=>{
- e.preventDefault();const v=$("reply").value.trim();if(!v||!selected)return;
- $("reply").value="";await fetch("/api/admin/chats/"+encodeURIComponent(selected)+"/reply",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:v})});
+
+$("replyForm").onsubmit = async e => {
+  e.preventDefault();
+  const v = $("reply").value.trim(); if (!v || !selected) return;
+  $("reply").value = "";
+  await fetch("/api/admin/chats/" + encodeURIComponent(selected) + "/reply", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message: v })
+  });
 };
-function startStream(){
- const es=new EventSource("/api/admin/chat-stream");
- es.onmessage=e=>{try{const m=JSON.parse(e.data);add(m);loadChats();}catch(_){}};
+
+function startStream() {
+  const es = new EventSource("/api/admin/chat-stream");
+  es.onmessage = e => {
+    try {
+      const m = JSON.parse(e.data);
+      add(m);
+      loadChats();
+    } catch (_) { }
+  };
+  // optional: reconnect on error
+  es.onerror = () => { /* browser will retry by default; could implement backoff if desired */ };
 }
-function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[c]))}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[c]));
+}
 </script>
 </body>
 </html>
